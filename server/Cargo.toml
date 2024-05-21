@@ -1,0 +1,20 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+common = { path = "../common" }
+
+enet = "0.3.0"
+enet-sys = "1.0.3"
+rlua = "0.19.4"
+rand = "0.8.5"
+fast-noise-lite-rs = "0.8.0"
+signal-hook = "0.3.15"
+serde = { version="1.0.188", features = ["derive"] }
+bincode = "1.3.3"
+anyhow = "1.0.75"
+cgmath = "0.18.0"
