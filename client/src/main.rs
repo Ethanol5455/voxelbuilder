@@ -16,7 +16,7 @@ use winit::{
     window::{CursorGrabMode, Window, WindowBuilder},
 };
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use common::{
     items::{ItemInfo, ItemManager, ItemType, TextureCoordinates},
     Chunk, QuadVertex,
@@ -513,7 +513,7 @@ pub async fn run() {
         match host.service(1000) {
             Ok(e) => match e {
                 Some(e) => match &e {
-                    enet::Event::Connect(e) => {
+                    enet::Event::Connect(_) => {
                         eprintln!("Someone trying to connect with the client?")
                     }
                     enet::Event::Disconnect(_, _) => {
@@ -521,9 +521,9 @@ pub async fn run() {
                         break;
                     }
                     enet::Event::Receive {
-                        sender,
-                        channel_id,
-                        packet,
+                        sender: _,
+                        channel_id: _,
+                        packet: _,
                     } => todo!(),
                 },
                 None => continue,
