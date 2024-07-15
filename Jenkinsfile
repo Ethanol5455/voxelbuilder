@@ -1,5 +1,5 @@
 pipeline {
-  agent { label 'alpine-agent' }
+  agent { label 'bookworm-agent' }
   
   // environment {
   //   WORKING_DIR = '/workspace/voxelbuilder'
