@@ -526,7 +526,7 @@ pub async fn run() {
                         packet: _,
                     } => {
                         println!("Got a message from the server!");
-                    },
+                    }
                 },
                 None => continue,
             },
