@@ -524,7 +524,9 @@ pub async fn run() {
                         sender: _,
                         channel_id: _,
                         packet: _,
-                    } => todo!(),
+                    } => {
+                        println!("Got a message from the server!");
+                    },
                 },
                 None => continue,
             },
