@@ -2,7 +2,7 @@ use anyhow::*;
 use image::GenericImageView;
 
 pub struct Texture {
-    // pub texture: wgpu::Texture,
+    pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
 }
@@ -71,7 +71,7 @@ impl Texture {
         });
 
         Ok(Self {
-            // texture,
+            texture,
             view,
             sampler,
         })
@@ -116,7 +116,7 @@ impl Texture {
         });
 
         Self {
-            // texture,
+            texture,
             view,
             sampler,
         }
