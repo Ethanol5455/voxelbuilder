@@ -1,17 +1,24 @@
 use anyhow::Result;
 use std::{
     net::Ipv4Addr,
-    sync::mpsc::{Receiver, Sender},
+    sync::mpsc::{Receiver, Sender, TryRecvError},
 };
 
 use enet::{Address, BandwidthLimit, ChannelLimit, Enet, Packet, PacketMode};
 use packets::{assemble_player_connect_info, assemble_player_info_request};
 
-use crate::packets;
+use common::{
+    packets::{assemble_player_info_data, parse_player_info_data, PacketType},
+    player_data::Player,
+};
+
+use crate::packets::{self};
 
 #[derive(Debug)]
 pub enum NetworkingMessage {
     ConnectionEstablished,
+    PlayerInfoReceived(Player),
+    SendPlayerInfo(Player),
 }
 
 pub fn run_networking(
@@ -38,8 +45,6 @@ pub fn run_networking(
             Some(e) => e,
             _ => continue,
         };
-
-        // println!("[client] event: {:#?}", e);
 
         match e {
             enet::Event::Connect(ref p) => {
@@ -77,7 +82,8 @@ pub fn run_networking(
     )
     .expect("Sending packet failed");
 
-    loop {
+    let mut should_exit = false;
+    while !should_exit {
         match host.service(1000) {
             Ok(e) => match e {
                 Some(e) => match &e {
@@ -91,14 +97,57 @@ pub fn run_networking(
                     enet::Event::Receive {
                         sender: _,
                         channel_id: _,
-                        packet: _,
+                        packet,
                     } => {
-                        println!("Got a message from the server!");
+                        let data = packet.data();
+                        let packet_type = match PacketType::fromu8(data[0]) {
+                            Ok(p) => p,
+                            Err(_) => {
+                                eprintln!("Unknown packet type with id {}", data[0]);
+                                continue;
+                            }
+                        };
+                        match packet_type {
+                            PacketType::PlayerInfoData => {
+                                to_main.send(NetworkingMessage::PlayerInfoReceived(
+                                    parse_player_info_data(data),
+                                ))?;
+                            }
+                            _ => eprintln!("Unhandled connection type {:?}", packet_type),
+                        }
                     }
                 },
-                None => continue,
+                None => (),
             },
             Err(_) => eprintln!("Service failed!"),
+        }
+
+        let mut peer = host.peers().next().expect("Server must be a peer");
+        loop {
+            let msg = match from_main.try_recv() {
+                Ok(msg) => msg,
+                Err(e) => match e {
+                    TryRecvError::Empty => break,
+                    TryRecvError::Disconnected => {
+                        eprintln!("Main thread has disconnected. Networking thread exiting.");
+                        should_exit = true;
+                        break;
+                    }
+                },
+            };
+            match msg {
+                NetworkingMessage::SendPlayerInfo(player) => peer
+                    .send_packet(
+                        Packet::new(
+                            &&assemble_player_info_data(&player),
+                            PacketMode::ReliableSequenced,
+                        )
+                        .unwrap(),
+                        1,
+                    )
+                    .expect("Sending packet failed"),
+                _ => eprintln!("Networking thread received unhandled message"),
+            }
         }
     }
 

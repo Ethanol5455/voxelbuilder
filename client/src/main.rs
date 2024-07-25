@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     io::Read,
-    sync::mpsc,
+    sync::mpsc::{self, Receiver, Sender},
     thread,
     time::SystemTime,
 };
@@ -19,6 +19,7 @@ use winit::{
 use anyhow::Result;
 use common::{
     items::{ItemInfo, ItemManager, ItemType, TextureCoordinates},
+    player_data::Player,
     Chunk, QuadVertex,
 };
 
@@ -38,6 +39,10 @@ fn read_file_as_bytes(path: &str) -> Result<Vec<u8>> {
 }
 
 struct State {
+    player: Player,
+    to_networking: Sender<NetworkingMessage>,
+    from_networking: Receiver<NetworkingMessage>,
+
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -46,6 +51,7 @@ struct State {
     window: Window,
 
     delta_time: f32,
+    send_player_info_timer: SystemTime,
 
     camera: Camera,
     camera_uniform: CameraUniform,
@@ -63,7 +69,12 @@ struct State {
 
 impl State {
     // Creating some of the wgpu types requires async code
-    async fn new(window: Window) -> Self {
+    async fn new(
+        window: Window,
+        to_networking: Sender<NetworkingMessage>,
+        from_networking: Receiver<NetworkingMessage>,
+        player: Player,
+    ) -> Self {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -179,7 +190,7 @@ impl State {
         let depth_texture =
             texture::Texture::create_depth_texture(&device, &config, "depth_texture");
 
-        let camera = Camera::new(Vector3::new(0.0, 1.0, 2.0), &config);
+        let camera = Camera::new(player.position, player.rotation, &config);
         let mut camera_uniform = CameraUniform::new();
         camera_uniform.update_view_proj(&camera);
 
@@ -324,6 +335,9 @@ impl State {
         let num_indices = test_chunk.indices.len() as u32;
 
         Self {
+            player,
+            to_networking,
+            from_networking,
             window,
             surface,
             device,
@@ -332,6 +346,7 @@ impl State {
             size,
 
             delta_time: 0.0,
+            send_player_info_timer: SystemTime::now(),
 
             camera,
             camera_uniform,
@@ -351,7 +366,7 @@ impl State {
         &self.window
     }
 
-    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+    fn resize_window(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
             self.config.width = new_size.width;
@@ -374,7 +389,20 @@ impl State {
     }
 
     fn update(&mut self) {
+        if SystemTime::now()
+            .duration_since(self.send_player_info_timer)
+            .expect("Is time moving backwards?")
+            .as_millis()
+            > 1000
+        {
+            self.to_networking
+                .send(NetworkingMessage::SendPlayerInfo(self.player.clone()))
+                .expect("Could not send internal message. Is the networking thread down?");
+            self.send_player_info_timer = SystemTime::now();
+        }
+
         self.camera.update(self.delta_time);
+        self.camera.update_player_position(&mut self.player);
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(
             &self.camera_buffer,
@@ -450,21 +478,30 @@ pub async fn run() {
     window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
     window.set_cursor_visible(false);
 
-    let mut state = State::new(window).await;
-
     let (networking_tx, from_networking) = mpsc::channel();
     let (to_networking, networking_rs) = mpsc::channel();
     thread::spawn(move || {
         let _ = run_networking(networking_tx, networking_rs);
     });
 
-    for msg in from_networking {
+    for msg in &from_networking {
         match msg {
             NetworkingMessage::ConnectionEstablished => break,
             _ => eprintln!("Shouldn't have received networking message type {:?} before networking is connected", msg),
         }
     }
-    println!("Connected to server!");
+    println!("Connected to server");
+
+    let mut player = None;
+    for msg in &from_networking {
+        match msg {
+            NetworkingMessage::PlayerInfoReceived(info) => {player = Some(info); break;},
+            _ => eprintln!("Shouldn't have received networking message type {:?} before networking is connected", msg),
+        }
+    }
+    println!("Got player info");
+
+    let mut state = State::new(window, to_networking, from_networking, player.unwrap()).await;
 
     let mut delta_timer = SystemTime::now();
 
@@ -514,10 +551,10 @@ pub async fn run() {
                         _ => (),
                     },
                     WindowEvent::Resized(physical_size) => {
-                        state.resize(*physical_size);
+                        state.resize_window(*physical_size);
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                        state.resize(**new_inner_size);
+                        state.resize_window(**new_inner_size);
                     }
                     _ => {}
                 }
@@ -530,7 +567,7 @@ pub async fn run() {
             match state.render() {
                 Ok(_) => {}
                 // Reconfigure the surface if lost
-                Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                Err(wgpu::SurfaceError::Lost) => state.resize_window(state.size),
                 // The system is out of memory, we should probably quit
                 Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                 // All other errors (Outdated, Timeout) should be resolved by the next frame

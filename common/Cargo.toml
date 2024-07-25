@@ -11,3 +11,4 @@ bytemuck = { version = "1.14", features = [ "derive" ] }
 cgmath = { version="0.18.0", features = ["serde"]}
 serde = { version="1.0.188", features = ["derive"] }
 wgpu = "0.17.0"
+bincode = "1.3.3"

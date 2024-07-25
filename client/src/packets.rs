@@ -1,3 +1,5 @@
+use core::str;
+
 use common::packets::PacketType;
 
 pub fn assemble_player_connect_info(username: &str) -> Vec<u8> {

@@ -6,8 +6,7 @@ use std::{fs, io};
 
 use anyhow::Result;
 use cgmath::{Vector2, Vector3};
-
-use crate::player_data::Player;
+use common::player_data::Player;
 
 use crate::world::BlockToPlace;
 use common::{Chunk, CompressedSet};

@@ -1,4 +1,5 @@
 use cgmath::{Array, InnerSpace, Matrix4, Point3, SquareMatrix, Vector2, Vector3};
+use common::player_data::Player;
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode, WindowEvent};
 
 pub struct Camera {
@@ -33,7 +34,11 @@ pub struct Camera {
 impl Camera {
     const UP_DIR: Vector3<f32> = Vector3::new(0.0, 1.0, 0.0);
 
-    pub fn new(start_position: Vector3<f32>, config: &wgpu::SurfaceConfiguration) -> Self {
+    pub fn new(
+        start_position: Vector3<f32>,
+        start_rotation: Vector2<f32>,
+        config: &wgpu::SurfaceConfiguration,
+    ) -> Self {
         let mut cam = Camera {
             speed: 10.0,
             sensitivity: 5.0,
@@ -46,8 +51,8 @@ impl Camera {
             proj: Matrix4::identity(),
             position: start_position,
             front: Vector3::new(0.0, 0.0, -1.0),
-            pitch: 0.0,
-            yaw: 0.0,
+            pitch: start_rotation.x,
+            yaw: start_rotation.y,
 
             aspect: config.width as f32 / config.height as f32,
             fovy: 45.0,
@@ -211,6 +216,12 @@ impl Camera {
             }
             _ => false,
         }
+    }
+
+    pub fn update_player_position(&self, player: &mut Player) {
+        player.position = self.position;
+        player.rotation.x = self.pitch;
+        player.rotation.y = self.yaw;
     }
 }
 

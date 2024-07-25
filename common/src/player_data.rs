@@ -1,7 +1,7 @@
 use cgmath::{Vector2, Vector3};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     pub username: String,
     pub position: Vector3<f32>,

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod items;
 pub mod packets;
+pub mod player_data;
 
 const CHUNK_WIDTH: u8 = 16;
 

@@ -1,3 +1,8 @@
+use core::str;
+
+use crate::player_data::Player;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[allow(dead_code)]
 pub enum PacketType {
     PlayerConnect,
@@ -29,4 +34,47 @@ impl PacketType {
 pub enum ChunkUpdateType {
     PlaceBlockEvent,
     DestroyBlockEvent,
+}
+
+pub fn assemble_player_info_data(player: &Player) -> Vec<u8> {
+    let mut packet_data = Vec::<u8>::new();
+    // [0: Type][1-12: position][13-20: rotation][21-: username]
+
+    packet_data.push(PacketType::PlayerInfoData as u8);
+
+    // position
+    let mut pos = bincode::serialize(&player.position).unwrap();
+    packet_data.append(&mut pos);
+
+    // rotation
+    let mut rot = bincode::serialize(&player.rotation).unwrap();
+    packet_data.append(&mut rot);
+
+    // username
+    for c in player.username.as_bytes() {
+        packet_data.push(*c);
+    }
+
+    packet_data
+}
+
+pub fn parse_player_info_data(data: &[u8]) -> Player {
+    assert_eq!(
+        PacketType::fromu8(data[0])
+            .expect("First byte of packet should be PacketType::PlayerInfoData"),
+        PacketType::PlayerInfoData
+    );
+
+    // [0: Type][1-12: position][13-20: rotation][21-: username]
+    let position = bincode::deserialize(&data[1..13]).unwrap();
+    let rotation = bincode::deserialize(&data[13..21]).unwrap();
+    let username = str::from_utf8(&data[21..(data.len() - 1)])
+        .unwrap()
+        .to_string();
+
+    Player {
+        username,
+        position,
+        rotation,
+    }
 }

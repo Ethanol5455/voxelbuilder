@@ -1,7 +1,6 @@
-mod player_data;
-
 mod save_file;
 use cgmath::Vector2;
+use common::packets::{assemble_player_info_data, parse_player_info_data};
 use rlua::Lua;
 use save_file::SaveFile;
 
@@ -139,16 +138,13 @@ impl Game {
                         }
                         PacketType::PlayerInfoData => {
                             // [0: Type][1-12: position][13-20: rotation][21-: username]
-                            let username = str::from_utf8(&data[21..(data.len() - 1)]).unwrap();
-                            let position = bincode::deserialize(&data[1..13]).unwrap();
-                            let rotation = bincode::deserialize(&data[13..21]).unwrap();
-
+                            let updated_player = parse_player_info_data(data);
                             let player = self
                                 .world
                                 .get_save_file()
-                                .get_user_data(&username.to_string());
-                            player.position = position;
-                            player.rotation = rotation;
+                                .get_user_data(&updated_player.username);
+                            player.position = updated_player.position;
+                            player.rotation = updated_player.rotation;
                         }
                         PacketType::ChunkRequest => {
                             // [0: Type][1-4: column X][5-8: column Z]
