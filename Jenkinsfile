@@ -23,9 +23,9 @@ spec:
     stages {
         stage('Setup') {
           steps {
-            // sh 'apk add make cmake clang clang-libclang rust rustfmt cargo g++'
             sh 'pwd'
             sh 'ls -la'
+            sh 'apk add make cmake clang clang-libclang rust rustfmt cargo g++'
           }
         }
     }
