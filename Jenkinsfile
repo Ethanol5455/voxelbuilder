@@ -28,5 +28,8 @@ spec:
             sh 'apk add make cmake clang clang-libclang rust rustfmt cargo g++'
           }
         }
+        stage('Build') {
+          sh 'cargo build --all'
+        }
     }
 }
