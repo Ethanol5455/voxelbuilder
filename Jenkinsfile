@@ -32,17 +32,19 @@ spec:
           }
         }
         stage('Build') {
-          sh 'cargo build --all'
+          steps {
+            sh 'cargo build --all'
+          }
         }
-    }
-    stage('Test') {
-      steps {
-          sh 'cargo test --all'
-      }
-    }
-    stage("Format") {
-      steps {
-          sh 'cargo fmt --check --verbose'
-      }
+        stage('Test') {
+          steps {
+            sh 'cargo test --all'
+          }
+        }
+        stage("Format") {
+          steps {
+            sh 'cargo fmt --check --verbose'
+          }
+        }
     }
 }
