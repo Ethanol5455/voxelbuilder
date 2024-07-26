@@ -31,16 +31,10 @@ spec:
         }
         stage ("Tests") {
           parallel {
-            stage("Building") {
-              stage('Build') {
-                steps {
-                  sh 'cargo build --all'
-                }
-              }
-              stage('Test') {
-                steps {
-                  sh 'cargo test --all'
-                }
+            stage("Build & Test") {
+              steps {
+                sh 'cargo build --all'
+                sh 'cargo test --all'
               }
             }
             stage("Format") {
