@@ -20,6 +20,9 @@ spec:
             retries 2
         }
     }
+    triggers {
+      githubPush()
+    }
     stages {
         stage('Setup') {
           steps {
