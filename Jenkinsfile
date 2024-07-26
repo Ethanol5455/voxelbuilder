@@ -26,25 +26,29 @@ spec:
     stages {
         stage('Setup') {
           steps {
-            sh 'pwd'
-            sh 'ls -la'
             sh 'apk add make cmake clang clang-libclang rust rustfmt cargo g++'
           }
         }
-        stage('Build') {
-          steps {
-            sh 'cargo build --all'
+        stage ("Tests") {
+          parallel {
+            stage("Building") {
+              stage('Build') {
+                steps {
+                  sh 'cargo build --all'
+                }
+              }
+              stage('Test') {
+                steps {
+                  sh 'cargo test --all'
+                }
+              }
+            }
+            stage("Format") {
+              steps {
+                sh 'cargo fmt --check --verbose'
+              }
+            }
           }
-        }
-        stage('Test') {
-          steps {
-            sh 'cargo test --all'
-          }
-        }
-        stage("Format") {
-          steps {
-            sh 'cargo fmt --check --verbose'
-          }
-        }
+        }       
     }
 }
