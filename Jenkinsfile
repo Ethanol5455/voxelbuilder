@@ -1,43 +1,50 @@
+// Uses Declarative syntax to run commands inside a container.
 pipeline {
-  agent { label 'bookworm-agent' }
-  
-  // environment {
-  //   WORKING_DIR = '/workspace/voxelbuilder'
-  // }
-  
-  stages {
-    // stage('Checkout') {
-    //   steps {
-    //     dir("/workspace") {
-    //         sh 'git clone https://github.com/Ethanol5455/voxelbuilder'
-    //     }
-    //   }
-    // }
-    stage('Setup') {
-      steps {
-        sh 'apk add make cmake clang clang-libclang rust rustfmt cargo g++'
-      }
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: shell
+    image: alpine
+    command:
+    - sleep
+    args:
+    - infinity
+    securityContext:
+      runAsUser: 0
+'''
+            defaultContainer 'shell'
+            retries 2
+        }
     }
-    // stage('Build') {
-    //   steps {
-    //     dir("${env.WORKING_DIR}") {
-    //       sh 'cargo build --all'
-    //     }
-    //   }
-    // }
-    // stage('Test') {
-    //   steps {
-    //     dir("${env.WORKING_DIR}") {
-    //       sh 'cargo test --all'
-    //     }
-    //   }
-    // }
-    // stage("Format") {
-    //   steps {
-    //     dir("${env.WORKING_DIR}") {
-    //       sh 'cargo fmt --check --verbose'
-    //     }
-    //   }
-    // }
-  }
+    triggers {
+      githubPush()
+    }
+    stages {
+        stage('Setup') {
+          steps {
+            sh 'pwd'
+            sh 'ls -la'
+            sh 'apk add make cmake clang clang-libclang rust rustfmt cargo g++'
+          }
+        }
+        stage('Build') {
+          steps {
+            sh 'cargo build --all'
+          }
+        }
+        stage('Test') {
+          steps {
+            sh 'cargo test --all'
+          }
+        }
+        stage("Format") {
+          steps {
+            sh 'cargo fmt --check --verbose'
+          }
+        }
+    }
 }
