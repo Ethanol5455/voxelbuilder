@@ -32,4 +32,14 @@ spec:
           sh 'cargo build --all'
         }
     }
+    stage('Test') {
+      steps {
+          sh 'cargo test --all'
+      }
+    }
+    stage("Format") {
+      steps {
+          sh 'cargo fmt --check --verbose'
+      }
+    }
 }
